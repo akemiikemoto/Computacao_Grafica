@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGL Drawing Gallery</title>
+    <style>
+        body {
+            margin: 20px;
+            padding: 0;
+            background-color: white;
+            font-family: Arial, sans-serif;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        table {
+            border-collapse: collapse;
+            margin: 0 auto;
+            border: 2px solid #ddd;
+        }
+        td {
+            border: 1px solid #ccc;
+            padding: 15px;
+            text-align: center;
+            vertical-align: top;
+            background-color: #f9f9f9;
+        }
+        h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #555;
+            font-size: 14px;
+        }
+        canvas {
+            border: 1px solid #999;
+            background-color: black;
+        }
+    </style>
+</head>
+<body>
+    <h1>WebGL Drawing Gallery</h1>
+
+    <table>
+        <!-- First Row: Basic Shapes -->
+        <tr>
+            <td>
+                <h3>Flower</h3>
+                <canvas id="glCanvasFlower" width="180" height="180"></canvas>
+            </td>
+            <td>
+                <h3>Car</h3>
+                <canvas id="glCanvasCar" width="180" height="180"></canvas>
+            </td>
+            <td>
+                <h3>Robot</h3>
+                <canvas id="glCanvas3" width="180" height="180"></canvas>
+            </td>
+            <td>
+                <h3>Pinwheel</h3>
+                <canvas id="glCanvas4" width="180" height="180"></canvas>
+            </td>
+            <!-- teste
+            <td>
+                <h3>Flower2</h3>
+                <canvas id="glCanvas5" width="180" height="180"></canvas>
+            </td> 
+            -->
+        </tr>
+    </table>
+
+    <!-- Load all JavaScript files -->
+    <script src="m3.js"></script>
+    <script src="flower.js"></script>
+    <script src="car.js"></script>
+    <script src="robot.js"></script>
+    <script src="pinwheel.js"></script>
+    <!-- <script src="flowers2.js"></script> --> 
+</body>
+</html>
