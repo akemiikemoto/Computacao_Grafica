@@ -22,6 +22,7 @@ const fragmentShaderSource = `
     }
 `;
 
+// Camera and reference point initial positions
 let cameraX = 2.0, cameraY = 2.0, cameraZ = 2.0;
 let prefX = 0.0, prefY = 0.0, prefZ = 0.0;
 
@@ -189,12 +190,19 @@ function main() {
   let V = [0.0, 1.0, 0.0];
   let viewingMatrix = m4.setViewingMatrix(P0, Pref, V);
 
-  let xw_min = -1.0;
-  let xw_max = 1.0;
-  let yw_min = -1.0;
-  let yw_max = 1.0;
+  // Pega a proporção real do canvas (ex: 1000 / 500 = 2.0)
+  let aspect = gl.canvas.width / gl.canvas.height;
+  let yw_min = -0.5;
+  let yw_max = 0.5;
+
+  // Ajusta a LARGURA do volume para bater com a proporção
+  let xw_min = yw_min * aspect; // (ex: -1.0 * 2.0 = -2.0)
+  let xw_max = yw_max * aspect; // (ex:  1.0 * 2.0 =  2.0)
+
   let z_near = -1.0;
   let z_far = -8.0;
+
+  // Agora a projeção (2:1) bate com o canvas (2:1)
   let projectionMatrix = m4.setOrthographicProjectionMatrix(xw_min, xw_max, yw_min, yw_max, z_near, z_far);
 
   let theta = 0.0;
@@ -254,28 +262,11 @@ function main() {
 
     let cameraAngle = degToRad(theta); // Converte o ângulo para radianos
 
-    // --- 1. Viewport da Esquerda (Efeito Slide 20: "Girar a Cabeça") ---
-    // Posição da câmera (P0) fixa, Ponto de Referência (Pref) animado.
-    gl.viewport(0, 0, gl.canvas.width / 2, gl.canvas.height);
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
-    // P0 fica fixo, um pouco para trás e para cima
     P0 = [0.0, 1.0, 4.0];
-    // Pref vai "olhar" de um lado para o outro no eixo X
-    Pref = [Math.sin(cameraAngle) * 2.0, 0.0, 0.0];
+    Pref = [Math.sin(cameraAngle) * 0.5, Math.cos(cameraAngle) * 0.5, 0.0];
     V = [0.0, 1.0, 0.0]; // Vetor 'up' continua sendo o Y
-    viewingMatrix = m4.setViewingMatrix(P0, Pref, V);
-
-    drawCube(); // Desenha o cubo (que continua girando em torno de si)
-    drawCoordinateAxes(); // Desenha os eixos (que ficam parados)
-
-    // --- 2. Viewport da Direita (Efeito Slide 21: "Orbitar") ---
-    // Posição da câmera (P0) animada, Ponto de Referência (Pref) fixo.
-    gl.viewport(gl.canvas.width / 2, 0, gl.canvas.width / 2, gl.canvas.height);
-
-    let orbitRadius = 4.0;
-    // P0 agora orbita em círculo no plano XZ, a uma altura fixa de 2.0
-    P0 = [cameraX, cameraY, cameraZ];
-    Pref = [prefX, prefY, prefZ];
     viewingMatrix = m4.setViewingMatrix(P0, Pref, V);
 
     drawCube();
@@ -288,49 +279,20 @@ function main() {
 }
 
 function unitVector(v) {
-  let vModulus = vectorModulus(v);
-  return v.map(function (x) { return x / vModulus; });
+  let vModulus = vectorModulus(v);
+  return v.map(function (x) { return x / vModulus; });
 }
 
 function vectorModulus(v) {
-  return Math.sqrt(Math.pow(v[0], 2) + Math.pow(v[1], 2) + Math.pow(v[2], 2));
+  return Math.sqrt(Math.pow(v[0], 2) + Math.pow(v[1], 2) + Math.pow(v[2], 2));
 }
 
 function radToDeg(r) {
-  return r * 180 / Math.PI;
+  return r * 180 / Math.PI;
 }
 
 function degToRad(d) {
-  return d * Math.PI / 180;
+  return d * Math.PI / 180;
 }
-
-// --- SUGESTÃO DE MELHORIA ---
-// Vamos completar os controles do teclado
-window.addEventListener('keydown', function (event) {
-  const step = 0.1; // Define a "velocidade" do movimento da câmera
-
-  switch (event.key) {
-    case 'ArrowLeft':
-      cameraX -= step; // Move câmera para a esquerda
-      break;
-    case 'ArrowRight':
-      cameraX += step; // Move câmera para a direita
-      break;
-    case 'ArrowUp':
-      cameraY += step; // Move câmera para cima
-      break;
-    case 'ArrowDown':
-      cameraY -= step; // Move câmera para baixo
-      break;
-    case 'w': // Use 'w' para mover "para frente"
-      cameraZ -= step;
-      break;
-    case 's': // Use 's' para mover "para trás"
-      cameraZ += step;
-      break;
-  }
-  // Como o 'requestAnimationFrame' está rodando,
-  // não precisamos chamar o drawScene() aqui.
-});
 
 window.addEventListener('load', main);
