@@ -55,67 +55,68 @@ function createProgram(gl, vertexShader, fragmentShader) {
   return program;
 }
 
-function setSphereVertices(radius, latitudeBands, longitudeBands) {
-    const vertexPositionData = [];
+function setCubeVertices(side) {
+  let v = side / 2;
+  return new Float32Array([
+    // Front
+    v, v, v,
+    v, -v, v,
+    -v, v, v,
+    -v, v, v,
+    v, -v, v,
+    -v, -v, v,
 
-    for (let latNumber = 0; latNumber <= latitudeBands; latNumber++) {
-        const theta = latNumber * Math.PI / latitudeBands;
-        const sinTheta = Math.sin(theta);
-        const cosTheta = Math.cos(theta);
+    // Left
+    -v, v, v,
+    -v, -v, v,
+    -v, v, -v,
+    -v, v, -v,
+    -v, -v, v,
+    -v, -v, -v,
 
-        for (let longNumber = 0; longNumber <= longitudeBands; longNumber++) {
-            const phi = longNumber * 2 * Math.PI / longitudeBands;
-            const sinPhi = Math.sin(phi);
-            const cosPhi = Math.cos(phi);
+    // Back
+    -v, v, -v,
+    -v, -v, -v,
+    v, v, -v,
+    v, v, -v,
+    -v, -v, -v,
+    v, -v, -v,
 
-            const x = cosPhi * sinTheta;
-            const y = cosTheta;
-            const z = sinPhi * sinTheta;
+    // Right
+    v, v, -v,
+    v, -v, -v,
+    v, v, v,
+    v, v, v,
+    v, -v, v,
+    v, -v, -v,
 
-            vertexPositionData.push(radius * x);
-            vertexPositionData.push(radius * y);
-            vertexPositionData.push(radius * z);
-        }
-    }
+    // Top
+    v, v, v,
+    v, v, -v,
+    -v, v, v,
+    -v, v, v,
+    v, v, -v,
+    -v, v, -v,
 
-    const sphereVertices = [];
-    for (let latNumber = 0; latNumber < latitudeBands; latNumber++) {
-        for (let longNumber = 0; longNumber < longitudeBands; longNumber++) {
-            const first = (latNumber * (longitudeBands + 1)) + longNumber;
-            const second = first + longitudeBands + 1;
-
-            const v1_idx = first * 3;
-            const v2_idx = (first + 1) * 3;
-            const v3_idx = second * 3;
-            const v4_idx = (second + 1) * 3;
-
-            const v1 = [vertexPositionData[v1_idx], vertexPositionData[v1_idx+1], vertexPositionData[v1_idx+2]];
-            const v2 = [vertexPositionData[v2_idx], vertexPositionData[v2_idx+1], vertexPositionData[v2_idx+2]];
-            const v3 = [vertexPositionData[v3_idx], vertexPositionData[v3_idx+1], vertexPositionData[v3_idx+2]];
-            const v4 = [vertexPositionData[v4_idx], vertexPositionData[v4_idx+1], vertexPositionData[v4_idx+2]];
-
-            // Triangle 1
-            sphereVertices.push(...v1);
-            sphereVertices.push(...v3);
-            sphereVertices.push(...v2);
-
-            // Triangle 2
-            sphereVertices.push(...v3);
-            sphereVertices.push(...v4);
-            sphereVertices.push(...v2);
-        }
-    }
-    return new Float32Array(sphereVertices);
+    // Bottom
+    v, -v, v,
+    v, -v, -v,
+    -v, -v, v,
+    -v, -v, v,
+    v, -v, -v,
+    -v, -v, -v,
+  ]);
 }
 
-function setSphereColors(latitudeBands, longitudeBands) {
+function setCubeColors() {
   let colors = [];
-  for (let i = 0; i < latitudeBands * longitudeBands; i++) {
-    let color = [Math.random(), Math.random(), Math.random()];
-    for (let j = 0; j < 6; j++) { // 6 vertices per quad
+  let color = [];
+  for (let i = 0; i < 6; i++) {
+    color = [Math.random(), Math.random(), Math.random()];
+    for (let j = 0; j < 6; j++)
       colors.push(...color);
-    }
   }
+
   return new Float32Array(colors);
 }
 
@@ -166,10 +167,10 @@ function main() {
   const colorLocation = gl.getAttribLocation(program, 'a_color');
 
   const VertexBuffer = gl.createBuffer();
-  let sphereVertices = [];
+  let cubeVertices = [];
 
   const ColorBuffer = gl.createBuffer();
-  let sphereColors = [];
+  let cubeColors = [];
 
   const modelViewMatrixUniformLocation = gl.getUniformLocation(program, 'u_modelViewMatrix');
   const viewingMatrixUniformLocation = gl.getUniformLocation(program, 'u_viewingMatrix');
@@ -210,20 +211,18 @@ function main() {
   let tz = 0.0;
   let tx_offset = 0.05;
 
-  const latitudeBands = 30;
-  const longitudeBands = 30;
-  sphereColors = setSphereColors(latitudeBands, longitudeBands);
-  sphereVertices = setSphereVertices(0.5, latitudeBands, longitudeBands);
+  cubeColors = setCubeColors();
+  cubeVertices = setCubeVertices(0.5);
 
-  function drawSphere() {
+  function drawCube() {
     gl.enableVertexAttribArray(positionLocation);
     gl.bindBuffer(gl.ARRAY_BUFFER, VertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, sphereVertices, gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, cubeVertices, gl.STATIC_DRAW);
     gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
 
     gl.enableVertexAttribArray(colorLocation);
     gl.bindBuffer(gl.ARRAY_BUFFER, ColorBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, sphereColors, gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, cubeColors, gl.STATIC_DRAW);
     gl.vertexAttribPointer(colorLocation, 3, gl.FLOAT, false, 0, 0);
 
     modelViewMatrix = m4.identity();
@@ -234,7 +233,7 @@ function main() {
     gl.uniformMatrix4fv(viewingMatrixUniformLocation, false, viewingMatrix);
     gl.uniformMatrix4fv(projectionMatrixUniformLocation, false, projectionMatrix);
 
-    gl.drawArrays(gl.TRIANGLES, 0, latitudeBands * longitudeBands * 6);
+    gl.drawArrays(gl.TRIANGLES, 0, 6 * 6);
   }
 
   function drawCoordinateAxes() {
@@ -270,7 +269,7 @@ function main() {
     V = [0.0, 1.0, 0.0]; // Vetor 'up' continua sendo o Y
     viewingMatrix = m4.setViewingMatrix(P0, Pref, V);
 
-    drawSphere();
+    drawCube();
     drawCoordinateAxes();
 
     requestAnimationFrame(drawScene);
