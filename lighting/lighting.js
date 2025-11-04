@@ -19,6 +19,7 @@ const vertexShaderSource = `
 
     void main() {
         gl_Position = u_projectionMatrix * u_viewingMatrix * u_modelViewMatrix * vec4(a_position,1.0);
+        //as normais também precisam ser transformadas pelo modelViewMatrix
         v_normal = mat3(u_modelViewMatrix) * a_normal;
         vec3 surfacePosition = (u_modelViewMatrix * vec4(a_position, 1)).xyz;
         v_surfaceToLight = u_lightPosition - surfacePosition;
@@ -40,7 +41,7 @@ const fragmentShaderSource = `
     void main() {
       vec3 ambientReflection = v_color;
       vec3 diffuseReflection = v_color;
-      vec3 specularReflection = vec3(1.0,1.0,1.0);
+      vec3 specularReflection = vec3(1.0,1.0,1.0); //aqui definimos a cor do brilho especular, está branco
 
       gl_FragColor = vec4(diffuseReflection, 1);
 
@@ -52,10 +53,11 @@ const fragmentShaderSource = `
       float light = dot(surfaceToLightDirection,normal);
       float specular = 0.0;
       if (light > 0.0) {
-        specular = pow(dot(normal, halfVector), 250.0);
+        specular = pow(dot(normal, halfVector), 250.0); //no exponente, quanto maior, mais "fino" é o brilho
       }
-
+      //combinação das reflexões para luz ambiente e difusa
       gl_FragColor.rgb = 0.4*ambientReflection + 0.6*light*diffuseReflection;
+      //como se fosse uma luz branca que irá aparecer no objeto refletindo
       gl_FragColor.rgb += specular*specularReflection;
     }
 `;
