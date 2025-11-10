@@ -1,24 +1,24 @@
-// Vertex shader source code
+// Vertex shader
 const vertexShaderSource = `
     attribute vec3 a_position;
     attribute vec3 a_color;
     varying vec3 v_color;
     uniform mat4 u_modelViewMatrix;
-    uniform mat4 u_viewingMatrix;
+    uniform mat4 u_viewMatrix;
     uniform mat4 u_projectionMatrix;
 
     void main() {
-        gl_Position = u_projectionMatrix * u_viewingMatrix * u_modelViewMatrix * vec4(a_position,1.0);
+        gl_Position = u_projectionMatrix * u_viewMatrix * u_modelViewMatrix * vec4(a_position, 1.0);
         v_color = a_color;
     }
 `;
 
-// Fragment shader source code
+// Fragment shader
 const fragmentShaderSource = `
     precision mediump float;
     varying vec3 v_color;
     void main() {
-        gl_FragColor = vec4(v_color,1.0);
+        gl_FragColor = vec4(v_color, 1.0);
     }
 `;
 
@@ -26,13 +26,11 @@ function createShader(gl, type, source) {
     const shader = gl.createShader(type);
     gl.shaderSource(shader, source);
     gl.compileShader(shader);
-
     if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        console.error('Error compiling shader:', gl.getShaderInfoLog(shader));
+        console.error('Shader compile error:', gl.getShaderInfoLog(shader));
         gl.deleteShader(shader);
         return null;
     }
-
     return shader;
 }
 
@@ -41,79 +39,54 @@ function createProgram(gl, vertexShader, fragmentShader) {
     gl.attachShader(program, vertexShader);
     gl.attachShader(program, fragmentShader);
     gl.linkProgram(program);
-
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-        console.error('Error linking program:', gl.getProgramInfoLog(program));
+        console.error('Program link error:', gl.getProgramInfoLog(program));
         gl.deleteProgram(program);
         return null;
     }
-
     return program;
 }
 
-function createCubeVertices(side) {
-  let v = side/2;
-  return new Float32Array([
-      // Front
-      v, v, v,
-      v, -v, v,
-      -v, v, v,
-      -v, v, v,
-      v, -v, v,
-      -v, -v, v,
-  
-      // Left
-      -v, v, v,
-      -v, -v, v,
-      -v, v, -v,
-      -v, v, -v,
-      -v, -v, v,
-      -v, -v, -v,
-  
-      // Back
-      -v, v, -v,
-      -v, -v, -v,
-      v, v, -v,
-      v, v, -v,
-      -v, -v, -v,
-      v, -v, -v,
-  
-      // Right
-      v, v, -v,
-      v, -v, -v,
-      v, v, v,
-      v, v, v,
-      v, -v, v,
-      v, -v, -v,
-  
-      // Top
-      v, v, v,
-      v, v, -v,
-      -v, v, v,
-      -v, v, v,
-      v, v, -v,
-      -v, v, -v,
-  
-      // Bottom
-      v, -v, v,
-      v, -v, -v,
-      -v, -v, v,
-      -v, -v, v,
-      v, -v, -v,
-      -v, -v, -v,
-  ]);
+function createCubeVertices(size) {
+    const s = size / 2;
+    return new Float32Array([
+        // Front
+        s, s, s, s, -s, s, -s, s, s,
+        -s, s, s, s, -s, s, -s, -s, s,
+        // Back
+        -s, s, -s, -s, -s, -s, s, s, -s,
+        s, s, -s, -s, -s, -s, s, -s, -s,
+        // Top
+        s, s, s, s, s, -s, -s, s, s,
+        -s, s, s, s, s, -s, -s, s, -s,
+        // Bottom
+        s, -s, s, -s, -s, s, s, -s, -s,
+        -s, -s, s, -s, -s, -s, s, -s, -s,
+        // Right
+        s, s, -s, s, -s, -s, s, s, s,
+        s, s, s, s, -s, -s, s, -s, s,
+        // Left
+        -s, s, s, -s, -s, s, -s, s, -s,
+        -s, s, -s, -s, -s, s, -s, -s, -s
+    ]);
 }
 
-function setCubeColors(){
-  let colors = [];
-  let color = [];
-  for(let i=0;i<6;i++){
-    color = [Math.random(),Math.random(),Math.random()];
-    for(let j=0;j<6;j++)
-      colors.push(...color);
-  }
-
-  return new Float32Array(colors);
+function createCubeColors() {
+    const colors = [];
+    const faceColors = [
+        [1.0, 0.0, 0.0], // Front - Red
+        [0.0, 1.0, 0.0], // Back - Green
+        [0.0, 0.0, 1.0], // Top - Blue
+        [1.0, 1.0, 0.0], // Bottom - Yellow
+        [1.0, 0.0, 1.0], // Right - Magenta
+        [0.0, 1.0, 1.0]  // Left - Cyan
+    ];
+    for (let i = 0; i < 6; i++) {
+        for (let j = 0; j < 6; j++) {
+            colors.push(...faceColors[i]);
+        }
+    }
+    return new Float32Array(colors);
 }
 
 function createGroundPlane() {
@@ -166,6 +139,10 @@ function createAxes() {
 
 function main() {
     const canvas = document.getElementById('glCanvas');
+    // Ajusta o canvas ao tamanho da janela automaticamente
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    
     const gl = canvas.getContext('webgl');
 
     if (!gl) {
@@ -196,7 +173,7 @@ function main() {
 
     // Camera state
     let cameraPos = [0, 1, 4];
-    let yaw = 0;
+    let yaw = -Math.PI / 2; // Começa a olhar para -Z
     let pitch = 0;
     const moveSpeed = 0.05;
     const mouseSensitivity = 0.002;
@@ -208,27 +185,22 @@ function main() {
 
     // Mouse controls
     let mouseDown = false;
-    let lastMouseX = 0;
-    let lastMouseY = 0;
-
     canvas.addEventListener('mousedown', (e) => {
         mouseDown = true;
-        lastMouseX = e.clientX;
-        lastMouseY = e.clientY;
+        canvas.requestPointerLock(); // Trava o cursor
     });
-
-    window.addEventListener('mouseup', () => mouseDown = false);
+    window.addEventListener('mouseup', () => {
+        mouseDown = false;
+        document.exitPointerLock(); // Libera o cursor
+    });
     window.addEventListener('mousemove', (e) => {
         if (mouseDown) {
-            const deltaX = e.clientX - lastMouseX;
-            const deltaY = e.clientY - lastMouseY;
+            const deltaX = e.movementX || 0;
+            const deltaY = e.movementY || 0;
             
-            yaw += deltaX * mouseSensitivity;
-            pitch -= deltaY * mouseSensitivity;
+            yaw += deltaX * mouseSensitivity * 5; // Ajuste de sensibilidade
+            pitch -= deltaY * mouseSensitivity * 5;
             pitch = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.01, pitch));
-            
-            lastMouseX = e.clientX;
-            lastMouseY = e.clientY;
         }
     });
 
@@ -236,42 +208,48 @@ function main() {
     let fov = 60;
     let near = 0.1;
     let far = 100;
-    let aspectRatio = 1.5;
+    let aspectRatio = canvas.width / canvas.height; // Valor inicial
 
+    // Conecta os sliders às variáveis
     document.getElementById('fov').addEventListener('input', (e) => {
         fov = parseFloat(e.target.value);
         document.getElementById('fovValue').textContent = fov;
     });
-
     document.getElementById('near').addEventListener('input', (e) => {
         near = parseFloat(e.target.value);
         document.getElementById('nearValue').textContent = near.toFixed(2);
     });
-
     document.getElementById('far').addEventListener('input', (e) => {
         far = parseFloat(e.target.value);
         document.getElementById('farValue').textContent = far;
     });
-
     document.getElementById('aspect').addEventListener('input', (e) => {
         aspectRatio = parseFloat(e.target.value);
         document.getElementById('aspectValue').textContent = aspectRatio.toFixed(1);
     });
 
+    // Atualiza o aspect ratio se a tela for redimensionada
+    window.addEventListener('resize', () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        aspectRatio = canvas.width / canvas.height;
+        document.getElementById('aspect').value = aspectRatio.toFixed(1);
+        document.getElementById('aspectValue').textContent = aspectRatio.toFixed(1);
+    });
+    // Dispara o evento de resize uma vez para acertar o valor inicial
+    window.dispatchEvent(new Event('resize'));
+
+
     function updateCamera() {
         // Forward/backward (W/S)
         const forward = [
-            Math.sin(yaw) * Math.cos(pitch),
+            Math.cos(pitch) * Math.sin(yaw),
             Math.sin(pitch),
-            -Math.cos(yaw) * Math.cos(pitch)
+            Math.cos(pitch) * Math.cos(yaw)
         ];
         
         // Right vector (A/D)
-        const right = [
-            Math.cos(yaw),
-            0,
-            Math.sin(yaw)
-        ];
+        const right = [ Math.cos(yaw), 0, -Math.sin(yaw) ];
 
         if (keys['w']) {
             cameraPos[0] += forward[0] * moveSpeed;
@@ -301,7 +279,7 @@ function main() {
             `Yaw: ${radToDeg(yaw).toFixed(1)}°, Pitch: ${radToDeg(pitch).toFixed(1)}°`;
     }
 
-    function drawObject(vertices, colors, modelMatrix) {
+    function drawObject(vertices, colors, modelMatrix, drawMode = gl.TRIANGLES) {
         gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
         gl.enableVertexAttribArray(positionLocation);
@@ -313,15 +291,18 @@ function main() {
         gl.vertexAttribPointer(colorLocation, 3, gl.FLOAT, false, 0, 0);
 
         gl.uniformMatrix4fv(modelViewMatrixLocation, false, modelMatrix);
+        
+        gl.drawArrays(drawMode, 0, vertices.length / 3);
     }
 
     let rotation = 0;
 
     function render() {
         updateCamera();
-        rotation += 0.01;
+        rotation += 0.005; // Rotação do cubo mais lenta
 
-        gl.viewport(0, 0, canvas.width * aspectRatio, canvas.height);
+        gl.viewport(0, 0, canvas.width, canvas.height);
+    
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         gl.useProgram(program);
@@ -329,16 +310,16 @@ function main() {
         // Projection matrix
         const projectionMatrix = m4.perspective(
             degToRad(fov),
-            aspectRatio,
+            aspectRatio, // A proporção é usada aqui
             near,
             far
         );
 
         // View matrix
         const target = [
-            cameraPos[0] + Math.sin(yaw) * Math.cos(pitch),
+            cameraPos[0] + Math.cos(pitch) * Math.sin(yaw),
             cameraPos[1] + Math.sin(pitch),
-            cameraPos[2] - Math.cos(yaw) * Math.cos(pitch)
+            cameraPos[2] + Math.cos(pitch) * Math.cos(yaw)
         ];
         const viewMatrix = m4.inverse(m4.lookAt(cameraPos, target, [0, 1, 0]));
 
@@ -347,16 +328,14 @@ function main() {
 
         // Draw ground
         drawObject(ground.vertices, ground.colors, m4.identity());
-        gl.drawArrays(gl.TRIANGLES, 0, ground.vertices.length / 3);
 
         // Draw cube at origin
         let cubeMatrix = m4.yRotate(m4.identity(), rotation);
+        cubeMatrix = m4.translate(cubeMatrix, 0, 0.25, 0); // Levanta o cubo para ficar sobre o chão
         drawObject(cubeVertices, cubeColors, cubeMatrix);
-        gl.drawArrays(gl.TRIANGLES, 0, 36);
 
         // Draw axes
-        drawObject(axes.vertices, axes.colors, m4.identity());
-        gl.drawArrays(gl.LINES, 0, 6);
+        drawObject(axes.vertices, axes.colors, m4.identity(), gl.LINES);
 
         requestAnimationFrame(render);
     }
