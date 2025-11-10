@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Camera Explorer</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; }
+        canvas { border: 1px solid #333; background-color: #111; display: block; margin: 20px auto; }
+        h1, h3 { text-align: center; color: #333; }
+        #instructions { max-width: 600px; margin: 0 auto; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        code { background: #eee; padding: 2px 5px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>3D Camera Explorer 📸</h1>
+    
+    <canvas id="glCanvas" width="600" height="400"></canvas>
+    
+    <div id="instructions">
+        <h3>Camera Controls</h3>
+        <ul>
+            <li><strong>Move (Translation):</strong>
+                <ul>
+                    <li><code>W</code>: Move Forward</li>
+                    <li><code>S</code>: Move Backward</li>
+                    <li><code>A</code>: Strafe Left</li>
+                    <li><code>D</code>: Strafe Right</li>
+                    <li><code>Q</code>: Move Up</li>
+                    <li><code>E</code>: Move Down</li>
+                </ul>
+            </li>
+            <li><strong>Rotate (World Rotation):</strong>
+                <ul>
+                    <li><code>&#8592;</code> (Left Arrow): Rotate Left (Y-Axis)</li>
+                    <li><code>&#8594;</code> (Right Arrow): Rotate Right (Y-Axis)</li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+
+    <script src="m4.js"></script>
+    
+    <script src="camera_explorer.js"></script>
+</body>
+</html>
