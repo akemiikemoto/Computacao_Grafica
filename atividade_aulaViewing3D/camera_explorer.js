@@ -51,7 +51,7 @@ function createProgram(gl, vertexShader, fragmentShader) {
     return program;
 }
 
-function setCubeVertices(side){
+function createCubeVertices(side) {
   let v = side/2;
   return new Float32Array([
       // Front
@@ -116,32 +116,52 @@ function setCubeColors(){
   return new Float32Array(colors);
 }
 
-function defineCoordinateAxes(){
-    return new Float32Array([
-      // X axis
-      -1.0, 0.0, 0.0,
-      1.0, 0.0, 0.0,
-      // Y axis
-      0.0, -1.0, 0.0,
-      0.0, 1.0, 0.0,
-      // Z axis
-      0.0, 0.0, -1.0,
-      0.0, 0.0, 1.0,
-    ]);
+function createGroundPlane() {
+    const size = 10;
+    const vertices = [];
+    const colors = [];
+    const divisions = 20;
+    const step = size / divisions;
+    
+    for (let i = 0; i < divisions; i++) {
+        for (let j = 0; j < divisions; j++) {
+            const x1 = -size/2 + i * step;
+            const x2 = -size/2 + (i + 1) * step;
+            const z1 = -size/2 + j * step;
+            const z2 = -size/2 + (j + 1) * step;
+            
+            const color = (i + j) % 2 === 0 ? [0.8, 0.8, 0.8] : [0.3, 0.3, 0.3];
+            
+            vertices.push(
+                x1, 0, z1, x2, 0, z1, x1, 0, z2,
+                x1, 0, z2, x2, 0, z1, x2, 0, z2
+            );
+            
+            for (let k = 0; k < 6; k++) {
+                colors.push(...color);
+            }
+        }
+    }
+    
+    return {
+        vertices: new Float32Array(vertices),
+        colors: new Float32Array(colors)
+    };
 }
 
-function defineCoordinateAxesColors(){
-    return new Float32Array([
-      // X axis
-      1.0, 0.0, 0.0,
-      1.0, 0.0, 0.0,
-      // Y axis
-      1.0, 0.0, 0.0,
-      1.0, 0.0, 0.0,
-      // Z axis
-      1.0, 0.0, 0.0,
-      1.0, 0.0, 0.0,
-    ]);
+function createAxes() {
+    return {
+        vertices: new Float32Array([
+            0, 0, 0, 5, 0, 0,  // X axis
+            0, 0, 0, 0, 5, 0,  // Y axis
+            0, 0, 0, 0, 0, 5   // Z axis
+        ]),
+        colors: new Float32Array([
+            1, 0, 0, 1, 0, 0,  // Red
+            0, 1, 0, 0, 1, 0,  // Green
+            0, 0, 1, 0, 0, 1   // Blue
+        ])
+    };
 }
 
 function main() {
@@ -149,146 +169,199 @@ function main() {
     const gl = canvas.getContext('webgl');
 
     if (!gl) {
-        console.error('WebGL not supported');
+        alert('WebGL não suportado!');
         return;
     }
 
     const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
     const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
-
     const program = createProgram(gl, vertexShader, fragmentShader);
-    gl.useProgram(program);
 
     const positionLocation = gl.getAttribLocation(program, 'a_position');
     const colorLocation = gl.getAttribLocation(program, 'a_color');
+    const modelViewMatrixLocation = gl.getUniformLocation(program, 'u_modelViewMatrix');
+    const viewMatrixLocation = gl.getUniformLocation(program, 'u_viewMatrix');
+    const projectionMatrixLocation = gl.getUniformLocation(program, 'u_projectionMatrix');
 
-    const VertexBuffer = gl.createBuffer();
-    let cubeVertices = [];
+    const vertexBuffer = gl.createBuffer();
+    const colorBuffer = gl.createBuffer();
 
-    const ColorBuffer = gl.createBuffer();
-    let cubeColors = [];
-    
-    const modelViewMatrixUniformLocation = gl.getUniformLocation(program,'u_modelViewMatrix');
-    const viewingMatrixUniformLocation = gl.getUniformLocation(program,'u_viewingMatrix');
-    const projectionMatrixUniformLocation = gl.getUniformLocation(program,'u_projectionMatrix');
-
-    let coordinateAxes = defineCoordinateAxes();
-    let coordinateAxesColors = defineCoordinateAxesColors();
+    const cubeVertices = createCubeVertices(0.5);
+    const cubeColors = createCubeColors();
+    const ground = createGroundPlane();
+    const axes = createAxes();
 
     gl.enable(gl.DEPTH_TEST);
-    gl.clearColor(1.0, 1.0, 1.0, 1.0);
-    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.clearColor(0.1, 0.1, 0.1, 1.0);
 
-    let modelViewMatrix = m4.identity();
+    // Camera state
+    let cameraPos = [0, 1, 4];
+    let yaw = 0;
+    let pitch = 0;
+    const moveSpeed = 0.05;
+    const mouseSensitivity = 0.002;
 
-    let P0 = [2.0,2.0,2.0];
-    let Pref = [0.0,0.0,0.0];
-    let V = [0.0,1.0,0.0];
-    let viewingMatrix = m4.setViewingMatrix(P0,Pref,V);
-    
-    let xw_min = -1.0;
-    let xw_max = 1.0;
-    let yw_min = -1.0;
-    let yw_max = 1.0;
-    let z_near = -1.0;
-    let z_far = -8.0;
-    let projectionMatrix = m4.setOrthographicProjectionMatrix(xw_min,xw_max,yw_min,yw_max,z_near,z_far);
+    // Keyboard state
+    const keys = {};
+    window.addEventListener('keydown', (e) => keys[e.key.toLowerCase()] = true);
+    window.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
 
-    let theta = 0.0;
-    let tx = 0.0;
-    let ty = 0.0;
-    let tz = 0.0;
-    let tx_offset = 0.05;
+    // Mouse controls
+    let mouseDown = false;
+    let lastMouseX = 0;
+    let lastMouseY = 0;
 
-    cubeColors = setCubeColors();
-    cubeVertices = setCubeVertices(0.5);
+    canvas.addEventListener('mousedown', (e) => {
+        mouseDown = true;
+        lastMouseX = e.clientX;
+        lastMouseY = e.clientY;
+    });
 
-    function drawCube(){
-      gl.enableVertexAttribArray(positionLocation);
-      gl.bindBuffer(gl.ARRAY_BUFFER, VertexBuffer);
-      gl.bufferData(gl.ARRAY_BUFFER, cubeVertices, gl.STATIC_DRAW);
-      gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
-  
-      gl.enableVertexAttribArray(colorLocation);
-      gl.bindBuffer(gl.ARRAY_BUFFER, ColorBuffer);
-      gl.bufferData(gl.ARRAY_BUFFER, cubeColors, gl.STATIC_DRAW);
-      gl.vertexAttribPointer(colorLocation, 3, gl.FLOAT, false, 0, 0);
-      
-      modelViewMatrix = m4.identity();
-      modelViewMatrix = m4.yRotate(modelViewMatrix,degToRad(theta));
-      modelViewMatrix = m4.translate(modelViewMatrix,tx,ty,tz);
+    window.addEventListener('mouseup', () => mouseDown = false);
+    window.addEventListener('mousemove', (e) => {
+        if (mouseDown) {
+            const deltaX = e.clientX - lastMouseX;
+            const deltaY = e.clientY - lastMouseY;
+            
+            yaw += deltaX * mouseSensitivity;
+            pitch -= deltaY * mouseSensitivity;
+            pitch = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.01, pitch));
+            
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+        }
+    });
 
-      gl.uniformMatrix4fv(modelViewMatrixUniformLocation,false,modelViewMatrix);
-      gl.uniformMatrix4fv(viewingMatrixUniformLocation,false,viewingMatrix);
-      gl.uniformMatrix4fv(projectionMatrixUniformLocation,false,projectionMatrix);
+    // Projection controls
+    let fov = 60;
+    let near = 0.1;
+    let far = 100;
+    let aspectRatio = 1.5;
 
-      gl.drawArrays(gl.TRIANGLES, 0, 6*6);
+    document.getElementById('fov').addEventListener('input', (e) => {
+        fov = parseFloat(e.target.value);
+        document.getElementById('fovValue').textContent = fov;
+    });
+
+    document.getElementById('near').addEventListener('input', (e) => {
+        near = parseFloat(e.target.value);
+        document.getElementById('nearValue').textContent = near.toFixed(2);
+    });
+
+    document.getElementById('far').addEventListener('input', (e) => {
+        far = parseFloat(e.target.value);
+        document.getElementById('farValue').textContent = far;
+    });
+
+    document.getElementById('aspect').addEventListener('input', (e) => {
+        aspectRatio = parseFloat(e.target.value);
+        document.getElementById('aspectValue').textContent = aspectRatio.toFixed(1);
+    });
+
+    function updateCamera() {
+        // Forward/backward (W/S)
+        const forward = [
+            Math.sin(yaw) * Math.cos(pitch),
+            Math.sin(pitch),
+            -Math.cos(yaw) * Math.cos(pitch)
+        ];
+        
+        // Right vector (A/D)
+        const right = [
+            Math.cos(yaw),
+            0,
+            Math.sin(yaw)
+        ];
+
+        if (keys['w']) {
+            cameraPos[0] += forward[0] * moveSpeed;
+            cameraPos[1] += forward[1] * moveSpeed;
+            cameraPos[2] += forward[2] * moveSpeed;
+        }
+        if (keys['s']) {
+            cameraPos[0] -= forward[0] * moveSpeed;
+            cameraPos[1] -= forward[1] * moveSpeed;
+            cameraPos[2] -= forward[2] * moveSpeed;
+        }
+        if (keys['a']) {
+            cameraPos[0] -= right[0] * moveSpeed;
+            cameraPos[2] -= right[2] * moveSpeed;
+        }
+        if (keys['d']) {
+            cameraPos[0] += right[0] * moveSpeed;
+            cameraPos[2] += right[2] * moveSpeed;
+        }
+        if (keys['q']) cameraPos[1] += moveSpeed;
+        if (keys['e']) cameraPos[1] -= moveSpeed;
+
+        // Update UI
+        document.getElementById('position').textContent = 
+            `x: ${cameraPos[0].toFixed(2)}, y: ${cameraPos[1].toFixed(2)}, z: ${cameraPos[2].toFixed(2)}`;
+        document.getElementById('rotation').textContent = 
+            `Yaw: ${radToDeg(yaw).toFixed(1)}°, Pitch: ${radToDeg(pitch).toFixed(1)}°`;
     }
 
-    function drawCoordinateAxes(){
-      gl.enableVertexAttribArray(positionLocation);
-      gl.bindBuffer(gl.ARRAY_BUFFER, VertexBuffer);
-      gl.bufferData(gl.ARRAY_BUFFER, coordinateAxes, gl.STATIC_DRAW);
-      gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
-      gl.enableVertexAttribArray(colorLocation);
-      gl.bindBuffer(gl.ARRAY_BUFFER, ColorBuffer);
-      gl.bufferData(gl.ARRAY_BUFFER, coordinateAxesColors, gl.STATIC_DRAW);
-      gl.vertexAttribPointer(colorLocation, 3, gl.FLOAT, false, 0, 0);
-      
-      modelViewMatrix = m4.identity();
+    function drawObject(vertices, colors, modelMatrix) {
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+        gl.enableVertexAttribArray(positionLocation);
+        gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
 
-      gl.uniformMatrix4fv(modelViewMatrixUniformLocation,false,modelViewMatrix);
-      gl.uniformMatrix4fv(viewingMatrixUniformLocation,false,viewingMatrix);
-      gl.uniformMatrix4fv(projectionMatrixUniformLocation,false,projectionMatrix);
+        gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, colors, gl.STATIC_DRAW);
+        gl.enableVertexAttribArray(colorLocation);
+        gl.vertexAttribPointer(colorLocation, 3, gl.FLOAT, false, 0, 0);
 
-      gl.drawArrays(gl.LINES, 0, 6);
+        gl.uniformMatrix4fv(modelViewMatrixLocation, false, modelMatrix);
     }
 
-    function drawScene(){
-      gl.clear(gl.COLOR_BUFFER_BIT);
+    let rotation = 0;
 
-      theta += 5;
-      if(tx>2.0 || tx<-2.0)
-        tx_offset = -tx_offset;
-      tx += tx_offset;
+    function render() {
+        updateCamera();
+        rotation += 0.01;
 
-      gl.viewport(0, 0, gl.canvas.width/2, gl.canvas.height);
-      P0 = [0.0,0.0,2.0];
-      Pref = [0.0,0.0,0.0];
-      V = [0.0,1.0,0.0];
-      viewingMatrix = m4.setViewingMatrix(P0,Pref,V);
-      drawCube();
-      drawCoordinateAxes();
+        gl.viewport(0, 0, canvas.width * aspectRatio, canvas.height);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-      gl.viewport(gl.canvas.width/2, 0, gl.canvas.width/2, gl.canvas.height);
-      P0 = [2.0,2.0,2.0];
-      Pref = [0.0,0.0,0.0];
-      V = [0.0,1.0,0.0];
-      viewingMatrix = m4.setViewingMatrix(P0,Pref,V);
-      drawCube();
-      drawCoordinateAxes();
+        gl.useProgram(program);
 
-      requestAnimationFrame(drawScene);
+        // Projection matrix
+        const projectionMatrix = m4.perspective(
+            degToRad(fov),
+            aspectRatio,
+            near,
+            far
+        );
+
+        // View matrix
+        const target = [
+            cameraPos[0] + Math.sin(yaw) * Math.cos(pitch),
+            cameraPos[1] + Math.sin(pitch),
+            cameraPos[2] - Math.cos(yaw) * Math.cos(pitch)
+        ];
+        const viewMatrix = m4.inverse(m4.lookAt(cameraPos, target, [0, 1, 0]));
+
+        gl.uniformMatrix4fv(projectionMatrixLocation, false, projectionMatrix);
+        gl.uniformMatrix4fv(viewMatrixLocation, false, viewMatrix);
+
+        // Draw ground
+        drawObject(ground.vertices, ground.colors, m4.identity());
+        gl.drawArrays(gl.TRIANGLES, 0, ground.vertices.length / 3);
+
+        // Draw cube at origin
+        let cubeMatrix = m4.yRotate(m4.identity(), rotation);
+        drawObject(cubeVertices, cubeColors, cubeMatrix);
+        gl.drawArrays(gl.TRIANGLES, 0, 36);
+
+        // Draw axes
+        drawObject(axes.vertices, axes.colors, m4.identity());
+        gl.drawArrays(gl.LINES, 0, 6);
+
+        requestAnimationFrame(render);
     }
 
-    drawScene();
-}
-
-function unitVector(v){ 
-    let vModulus = vectorModulus(v);
-    return v.map(function(x) { return x/vModulus; });
-}
-
-function vectorModulus(v){
-    return Math.sqrt(Math.pow(v[0],2)+Math.pow(v[1],2)+Math.pow(v[2],2));
-}
-
-function radToDeg(r) {
-  return r * 180 / Math.PI;
-}
-
-function degToRad(d) {
-  return d * Math.PI / 180;
+    render();
 }
 
 window.addEventListener('load', main);

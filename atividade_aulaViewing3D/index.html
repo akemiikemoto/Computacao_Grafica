@@ -1,46 +1,104 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Camera Explorer</title>
+    <title>Camera Explorer</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; }
-        canvas { border: 1px solid #333; background-color: #111; display: block; margin: 20px auto; }
-        h1, h3 { text-align: center; color: #333; }
-        #instructions { max-width: 600px; margin: 0 auto; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        code { background: #eee; padding: 2px 5px; border-radius: 3px; }
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+        }
+        canvas {
+            display: block;
+            cursor: crosshair;
+        }
+        #controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            font-size: 12px;
+            max-width: 300px;
+        }
+        #controls h3 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+        }
+        .control-group {
+            margin: 10px 0;
+        }
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .control-group input[type="range"] {
+            width: 100%;
+        }
+        .key-hint {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        #info {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 11px;
+        }
     </style>
 </head>
 <body>
-    <h1>3D Camera Explorer 📸</h1>
+    <canvas id="glCanvas" width="1200" height="800"></canvas>
     
-    <canvas id="glCanvas" width="600" height="400"></canvas>
+    <div id="controls">
+        <h3>🎮 Controles da Câmera</h3>
+        <div style="margin-bottom: 15px;">
+            <strong>Movimentação:</strong><br>
+            <span class="key-hint">W/S</span> Frente/Trás<br>
+            <span class="key-hint">A/D</span> Esquerda/Direita<br>
+            <span class="key-hint">Q/E</span> Cima/Baixo<br>
+            <span class="key-hint">Mouse</span> Rotacionar câmera
+        </div>
+        
+        <div class="control-group">
+            <label>FOV: <span id="fovValue">60</span>°</label>
+            <input type="range" id="fov" min="30" max="120" value="60">
+        </div>
+        
+        <div class="control-group">
+            <label>Near Plane: <span id="nearValue">0.1</span></label>
+            <input type="range" id="near" min="0.01" max="2" step="0.01" value="0.1">
+        </div>
+        
+        <div class="control-group">
+            <label>Far Plane: <span id="farValue">100</span></label>
+            <input type="range" id="far" min="10" max="200" step="1" value="100">
+        </div>
+        
+        <div class="control-group">
+            <label>Aspect Ratio: <span id="aspectValue">1.5</span></label>
+            <input type="range" id="aspect" min="0.5" max="3" step="0.1" value="1.5">
+        </div>
+    </div>
     
-    <div id="instructions">
-        <h3>Camera Controls</h3>
-        <ul>
-            <li><strong>Move (Translation):</strong>
-                <ul>
-                    <li><code>W</code>: Move Forward</li>
-                    <li><code>S</code>: Move Backward</li>
-                    <li><code>A</code>: Strafe Left</li>
-                    <li><code>D</code>: Strafe Right</li>
-                    <li><code>Q</code>: Move Up</li>
-                    <li><code>E</code>: Move Down</li>
-                </ul>
-            </li>
-            <li><strong>Rotate (World Rotation):</strong>
-                <ul>
-                    <li><code>&#8592;</code> (Left Arrow): Rotate Left (Y-Axis)</li>
-                    <li><code>&#8594;</code> (Right Arrow): Rotate Right (Y-Axis)</li>
-                </ul>
-            </li>
-        </ul>
+    <div id="info">
+        <strong>Posição:</strong> <span id="position">x: 0, y: 1, z: 4</span><br>
+        <strong>Rotação:</strong> <span id="rotation">Yaw: 0°, Pitch: 0°</span>
     </div>
 
     <script src="m4.js"></script>
-    
     <script src="camera_explorer.js"></script>
 </body>
 </html>
